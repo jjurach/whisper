@@ -1,7 +1,10 @@
+import argparse
+import argparse
 import pyaudio
 import numpy as np
 import time
 import sys
+import threading
 from pynput.keyboard import Key, Listener, Controller
 from scipy.signal import resample
 
@@ -33,23 +36,11 @@ whisper_instance = None # Will be loaded dynamically
 # --- FUNCTIONS ---
 
 def start_recording():
-    global is_recording, audio_frames, stream
+    global is_recording, audio_frames
     if not is_recording:
         print("\n[REC] Started recording...")
         is_recording = True
         audio_frames = []
-        try:
-            # Open the audio stream
-            stream = p.open(format=FORMAT,
-                            channels=CHANNELS,
-                            rate=RATE,
-                            input=True,
-                            frames_per_buffer=CHUNK,
-                            input_device_index=INPUT_DEVICE_INDEX)
-        except Exception as e:
-            print(f"ERROR: Could not open audio stream: {e}")
-            is_recording = False
-            stream = None
 
 
 def stop_recording_and_process():
@@ -57,11 +48,6 @@ def stop_recording_and_process():
     if is_recording:
         is_recording = False
         print("[REC] Recording finished. Transcribing...")
-        
-        # 1. Close the stream
-        if stream:
-            stream.stop_stream()
-            stream.close()
 
         # 2. Process Audio Frames
         if audio_frames:
@@ -88,6 +74,13 @@ def stop_recording_and_process():
         
         return True # Processed successfully
     return False # Not recording
+
+# This callback function is called by PyAudio for each audio chunk
+def pyaudio_callback(in_data, frame_count, time_info, status):
+    global audio_frames, is_recording
+    if is_recording:
+        audio_frames.append(in_data)
+    return (in_data, pyaudio.paContinue)
 
 def on_press(key):
     # Start recording only when the trigger key is PRESSED
@@ -123,7 +116,14 @@ def discover_device_index():
     p_temp.terminate()
     return found_mic_index
 
-if __name__ == "__main__":
+def main():
+    global p, stream, whisper_instance, INPUT_DEVICE_INDEX
+
+    parser = argparse.ArgumentParser(description="A real-time voice dictation tool using Whisper.")
+    parser.add_argument("--timeout", type=int, help="Automatically exit after a specified number of seconds.")
+    parser.add_argument("--model", default=WHISPER_MODEL, help=f"The Whisper model to use (default: {WHISPER_MODEL}).")
+    args = parser.parse_args()
+
     # 0. Discovery and Index Check
     print("Starting Whisper Dictation System...")
     discovered_index = discover_device_index()
@@ -136,12 +136,27 @@ if __name__ == "__main__":
     
     # 1. Initialize PyAudio and Whisper
     p = pyaudio.PyAudio()
+    stream = None  # Initialize stream to None
     try:
         from whisper import load_model
-        print(f"Loading Whisper model: {WHISPER_MODEL}...")
-        whisper_instance = load_model(WHISPER_MODEL)
+        print(f"Loading Whisper model: {args.model}...")
+        whisper_instance = load_model(args.model)
+
+        # Open the audio stream in callback mode
+        print("Initializing audio stream in callback mode...")
+        stream = p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        input=True,
+                        frames_per_buffer=CHUNK,
+                        input_device_index=INPUT_DEVICE_INDEX,
+                        stream_callback=pyaudio_callback)
+        print("Audio stream initialized.")
+
     except Exception as e:
-        print(f"Error loading Whisper: {e}")
+        print(f"Error during initialization: {e}")
+        if p:
+            p.terminate()
         sys.exit(1)
 
     
@@ -152,37 +167,35 @@ if __name__ == "__main__":
     print(f"Press **ESCAPE** to quit.")
     print("-" * 40)
 
+    # The main logic is wrapped in a try block to ensure cleanup happens
     try:
-        # We need a separate thread to handle audio buffering
-        with Listener(on_press=on_press, on_release=on_release) as listener:
-            
-            # Main audio loop runs as long as the listener is active
-            while listener.is_alive():
-                # Continuously capture audio frames if recording is active
-                if is_recording and stream and stream.is_active():
-                    try:
-                        data = stream.read(CHUNK, exception_on_overflow=False)
-                        audio_frames.append(data)
-                        
-                        # Check if max recording time is reached (optional safety break)
-                        if len(audio_frames) * CHUNK / RATE > RECORD_SECONDS * 2:
-                            print("[WARNING] Max recording time reached. Forcing stop.")
-                            stop_recording_and_process()
-                            
-                    except IOError as e:
-                        # Handle stream errors (like overflow) gracefully
-                        print(f"Audio stream error: {e}")
-                        time.sleep(0.1)
-                        stop_recording_and_process()
-                else:
-                    time.sleep(0.05) # Sleep briefly to avoid maxing CPU
+        # --- INTERACTIVE MODE ---
+        print("-" * 40)
+        print(f"Dictation Ready. Press and HOLD **Right Control** to record.")
+        print("Release Right Control to transcribe and type.")
+        print(f"Press **ESCAPE** to quit.")
+        if args.timeout:
+            print(f"Script will automatically exit after {args.timeout} seconds.")
+        print("-" * 40)
 
-    except KeyboardInterrupt:
-        pass
+        with Listener(on_press=on_press, on_release=on_release) as listener:
+            # If a timeout is set, start a timer to stop the listener
+            if args.timeout:
+                timer = threading.Timer(args.timeout, listener.stop)
+                timer.daemon = True
+                timer.start()
+
+            listener.join()
+
     finally:
-        # Clean up resources
-        if stream and stream.is_active():
+        # Clean up resources that were initialized before the try block
+        print("Cleaning up resources...")
+        if stream:
             stream.stop_stream()
             stream.close()
-        p.terminate()
+        if p:
+            p.terminate()
         print("\nDictation system terminated.")
+
+if __name__ == "__main__":
+    main()

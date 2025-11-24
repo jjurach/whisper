@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "live-whisper"
+version = "0.1.0"
+description = "A real-time voice dictation tool using Whisper."
+dependencies = [
+    "openai-whisper",
+    "scipy",
+    "pyaudio",
+    "pynput",
+    "numpy",
+]
+
+[project.scripts]
+live-whisper = "live_dictation:main"
+
+[tool.setuptools]
+py-modules = ["live_dictation"]
