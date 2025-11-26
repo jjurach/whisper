@@ -63,6 +63,31 @@ python live_dictation.py --model small.en --timeout 60
 5.  **Release** the **Right Control** key.
 6.  The transcribed text will be typed out, followed by a space.
 
+## Development and Code Quality
+
+This project uses [Ruff](https://docs.astral.sh/ruff/) for linting and formatting, and [pre-commit](https://pre-commit.com/) hooks to ensure code quality and consistency.
+
+### Setup Development Environment
+
+1.  **Install Development Dependencies:**
+    With your virtual environment active, install the development tools specified in `pyproject.toml`:
+    ```bash
+    pip install .[dev]
+    ```
+
+2.  **Install Pre-Commit Hooks:**
+    This command sets up Git hooks to automatically run Ruff checks before every commit:
+    ```bash
+    pre-commit install
+    ```
+
+### Usage
+
+-   Ruff will automatically check and format your code on `git commit`. If changes are made, you'll need to `git add` the formatted files and `git commit` again.
+-   You can also manually run Ruff:
+    -   **Format:** `ruff format .`
+    -   **Lint:** `ruff check .`
+
 ## Files
 
 - `live_dictation.py`: The main application script.

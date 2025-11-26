@@ -17,5 +17,19 @@ dependencies = [
 [project.scripts]
 live-whisper = "live_dictation:main"
 
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pre-commit",
+]
+
 [tool.setuptools]
 py-modules = ["live_dictation"]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "I"] # Standard flake8 rules + isort
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
