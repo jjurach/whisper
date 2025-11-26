@@ -1,123 +1,78 @@
 import unittest
-from unittest.mock import patch, MagicMock, call
-import numpy as np
+from unittest.mock import patch, MagicMock
 
-# Import the functions and variables from the script to be tested
-import live_dictation as ld
-from pynput.keyboard import Key
+# We have to be careful about the order of imports and mocks
+# Import the script to be tested
+import live_dictation
 
-class TestLiveDictation(unittest.TestCase):
+class TestProcessingPipeline(unittest.TestCase):
+    
+    @patch('live_dictation.wave.open')
+    def test_save_audio_to_wav(self, mock_wave_open):
+        """
+        Tests that the save_audio_to_wav function calls the wave module
+        with the correct parameters.
+        """
+        # Create a mock wave object
+        mock_wf = MagicMock()
+        mock_wave_open.return_value.__enter__.return_value = mock_wf
 
-    def setUp(self):
-        """Set up a clean state before each test."""
-        ld.is_recording = False
-        ld.audio_frames = []
+        # Prepare dummy data
+        dummy_buffer = b'\x01\x02\x03'
+        dummy_channels = 1
+        dummy_width = 2
+        dummy_rate = 16000
+
+        # Call the function
+        filename = live_dictation.save_audio_to_wav(
+            dummy_buffer, dummy_channels, dummy_width, dummy_rate)
+
+        # Assertions
+        self.assertIsNotNone(filename)
+        self.assertTrue(filename.startswith('/tmp/recording_'))
+        self.assertTrue(filename.endswith('.wav'))
+
+        # Check that wave.open was called correctly
+        mock_wave_open.assert_called_once_with(filename, 'wb')
+
+        # Check that the wave object's methods were called with correct parameters
+        mock_wf.setnchannels.assert_called_once_with(dummy_channels)
+        mock_wf.setsampwidth.assert_called_once_with(dummy_width)
+        mock_wf.setframerate.assert_called_once_with(dummy_rate)
+        mock_wf.writeframes.assert_called_once_with(dummy_buffer)
+
+    def test_process_text_with_llm_mock(self):
+        """
+        Tests the mock LLM processing function.
+        """
+        input_text = "hello world"
+        expected_output = "hello world (processed)"
         
-        # Mocking external dependencies
-        self.pyaudio_patch = patch('live_dictation.pyaudio')
-        self.whisper_patch = patch('live_dictation.whisper_instance')
-        self.keyboard_patch = patch('live_dictation.keyboard')
+        processed_text = live_dictation.process_text_with_llm(input_text)
         
-        self.mock_pyaudio = self.pyaudio_patch.start()
-        self.mock_whisper = self.whisper_patch.start()
-        self.mock_keyboard = self.keyboard_patch.start()
+        self.assertEqual(processed_text, expected_output)
 
-    def tearDown(self):
-        """Clean up patches after each test."""
-        self.pyaudio_patch.stop()
-        self.whisper_patch.stop()
-        self.keyboard_patch.stop()
-
-    def test_start_recording(self):
-        """Verify that start_recording sets the recording flag and clears previous frames."""
-        ld.audio_frames = [b'some_old_data']
-        ld.start_recording()
-        self.assertTrue(ld.is_recording)
-        self.assertEqual(ld.audio_frames, [])
-
-    def test_stop_recording_and_process_when_not_recording(self):
-        """Verify that processing does not occur if not recording."""
-        result = ld.stop_recording_and_process()
-        self.assertFalse(result)
-        self.mock_whisper.transcribe.assert_not_called()
-
-    def test_stop_recording_and_process_with_no_audio(self):
-        """Verify behavior when recording stops with no audio captured."""
-        ld.is_recording = True
-        result = ld.stop_recording_and_process()
-        self.assertTrue(result)
-        self.assertFalse(ld.is_recording)
-        self.mock_whisper.transcribe.assert_not_called()
-        self.mock_keyboard.type.assert_not_called()
-
-    @patch('live_dictation.resample')
-    def test_stop_recording_and_process_with_audio(self, mock_resample):
-        """Verify audio processing, resampling, transcription, and typing."""
-        # 1. Setup
-        ld.is_recording = True
-        # Simulate raw audio frames (16-bit integers)
-        fake_audio_chunk = np.random.randint(-32768, 32767, size=ld.CHUNK, dtype=np.int16)
-        ld.audio_frames = [fake_audio_chunk.tobytes()]
-
-        # Mock the transcription result
-        self.mock_whisper.transcribe.return_value = {'text': '  hello world  '}
+    @patch('live_dictation.whisper_instance')
+    def test_transcribe_audio(self, mock_whisper_instance):
+        """
+        Tests the transcribe_audio function by mocking the whisper model.
+        """
+        # Configure the mock whisper instance
+        mock_whisper_instance.transcribe.return_value = {
+            'text': 'this is a test',
+            'language': 'en'
+        }
         
-        # Mock the resampler to return a predictable output
-        mock_resample.return_value = np.zeros(100, dtype=np.float32)
+        # Create dummy audio data (not important as the model is mocked)
+        dummy_audio_data = b''
 
-        # 2. Execute
-        result = ld.stop_recording_and_process()
+        # Call the function
+        result = live_dictation.transcribe_audio(dummy_audio_data)
 
-        # 3. Assert
-        self.assertTrue(result)
-        self.assertFalse(ld.is_recording)
-
-        # Check if resampling was called correctly
-        self.assertEqual(ld.RATE, 44100) # Ensure original rate requires resampling
-        mock_resample.assert_called_once()
-
-        # Check if transcription was called
-        self.mock_whisper.transcribe.assert_called_once()
-        # Verify the transcribed text is typed correctly (stripped with a space)
-        self.mock_keyboard.type.assert_called_once_with("hello world ")
-
-    def test_pyaudio_callback(self):
-        """Verify the callback appends audio only when recording."""
-        fake_data = b'x01x02'
-        
-        # Should not append data if not recording
-        ld.is_recording = False
-        ld.pyaudio_callback(fake_data, 0, 0, 0)
-        self.assertEqual(len(ld.audio_frames), 0)
-
-        # Should append data when recording
-        ld.is_recording = True
-        ld.pyaudio_callback(fake_data, 0, 0, 0)
-        self.assertEqual(len(ld.audio_frames), 1)
-        self.assertEqual(ld.audio_frames[0], fake_data)
-
-    @patch('live_dictation.start_recording')
-    def test_on_press_trigger_key(self, mock_start_recording):
-        """Verify that the trigger key starts recording."""
-        ld.on_press(ld.TRIGGER_KEY)
-        mock_start_recording.assert_called_once()
-
-    def test_on_press_stop_key(self):
-        """Verify that the stop key returns False to exit listener."""
-        result = ld.on_press(ld.STOP_KEY)
-        self.assertFalse(result)
-
-    @patch('live_dictation.stop_recording_and_process')
-    def test_on_release_trigger_key(self, mock_stop_recording):
-        """Verify that releasing the trigger key stops recording."""
-        ld.on_release(ld.TRIGGER_KEY)
-        mock_stop_recording.assert_called_once()
-
-    def test_on_release_other_key(self):
-        """Verify that releasing other keys does nothing."""
-        ld.on_release(Key.shift)
-        # No error should be raised, and no functions should be called.
-        # This implicitly tests that nothing happens.
+        # Assertions
+        mock_whisper_instance.transcribe.assert_called_once_with(dummy_audio_data, fp16=False)
+        self.assertIn('text', result)
+        self.assertEqual(result['text'], 'this is a test')
 
 if __name__ == '__main__':
     unittest.main()

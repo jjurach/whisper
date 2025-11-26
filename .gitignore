@@ -1,0 +1,10 @@
+# Ignore temporary files, logs, and virtual environments
+/tmp
+/venv
+*.pyc
+__pycache__/
+.pytest_cache/
+*.log
+*.pid
+/build
+/*.egg-info
