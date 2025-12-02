@@ -161,7 +161,8 @@ def process_text_with_llm(text):
     """
     print(f"Processing text '{text}' with secondary LLM (mock)...", flush=True)
     # For now, just append "(processed)" to demonstrate the pipeline
-    processed_text = f"{text} (processed)"
+    #processed_text = f"{text} (processed)"
+    processed_text = text
     return processed_text
 
 
