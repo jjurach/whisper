@@ -6,6 +6,7 @@ import time
 import sys
 import threading
 import wave
+import re
 from pprint import pprint
 from pynput.keyboard import Key, Listener, Controller
 from scipy.signal import resample
@@ -117,7 +118,7 @@ def stop_recording_and_process():
         result = transcribe_audio(audio_data)
         transcribed_text = result["text"].strip()
 
-        # 6. (MOCK) Process text with a secondary LLM
+        # 6. Process text with keyword punctuation replacement
         final_text = process_text_with_llm(transcribed_text)
         print(f"Final text to be typed: '{final_text}'", flush=True)
 
@@ -155,15 +156,44 @@ def transcribe_audio(audio_data):
 
 def process_text_with_llm(text):
     """
-    (MOCK) Processes the transcribed text with a secondary LLM.
-    This is a placeholder for future functionality like summarization,
-    command extraction, or grammar correction.
+    Processes the transcribed text by replacing spoken punctuation commands
+    with actual punctuation marks, aligned with Apple's dictation commands.
     """
-    print(f"Processing text '{text}' with secondary LLM (mock)...", flush=True)
-    # For now, just append "(processed)" to demonstrate the pipeline
-    #processed_text = f"{text} (processed)"
-    processed_text = text
-    return processed_text
+    if not text:
+        return text
+
+    print(f"Processing text '{text}' with keyword punctuation replacement...", flush=True)
+
+    # Order: longer phrases first to prevent partial matches
+    replacements = {
+        # Multi-word commands first
+        "question mark": "?",
+        "exclamation point": "!",
+        "new paragraph": "\n\n",
+        "new line": "\n",
+        "open quote": "\"",
+        "close quote": "\"",
+        "dollar sign": "$",
+        "open parenthesis": "(",
+        "close parenthesis": ")",
+        # Single-word commands
+        "period": ".",
+        "comma": ",",
+        "colon": ":",
+        "semicolon": ";",
+        "hashtag": "#",
+    }
+
+    # Case-insensitive word boundary replacement
+    for keyword, punctuation in replacements.items():
+        pattern = r'\b' + re.escape(keyword) + r'\b'
+        text = re.sub(pattern, punctuation, text, flags=re.IGNORECASE)
+
+    # Clean up extra spaces after punctuation (Apple dictation behavior)
+    # Remove spaces after punctuation marks but not before
+    text = re.sub(r'([.,!?;:\'\"])(\s+)', r'\1', text)
+
+    return text
 
 
 def on_press(key):

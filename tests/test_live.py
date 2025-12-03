@@ -42,16 +42,27 @@ class TestProcessingPipeline(unittest.TestCase):
         mock_wf.setframerate.assert_called_once_with(dummy_rate)
         mock_wf.writeframes.assert_called_once_with(dummy_buffer)
 
-    def test_process_text_with_llm_mock(self):
+    def test_process_text_with_llm_punctuation_replacement(self):
         """
-        Tests the mock LLM processing function.
+        Tests the keyword-based punctuation replacement function.
         """
-        input_text = "hello world"
-        expected_output = "hello world (processed)"
-
+        # Test basic punctuation replacement
+        input_text = "hello world period"
+        expected_output = "hello world."
         processed_text = live_dictation.process_text_with_llm(input_text)
-
         self.assertEqual(processed_text, expected_output)
+
+        # Test no replacement needed
+        input_text = "hello world"
+        expected_output = "hello world"
+        processed_text = live_dictation.process_text_with_llm(input_text)
+        self.assertEqual(processed_text, expected_output)
+
+        # Test None input
+        self.assertIsNone(live_dictation.process_text_with_llm(None))
+
+        # Test empty input
+        self.assertEqual(live_dictation.process_text_with_llm(""), "")
 
     @patch("live_dictation.whisper_instance")
     def test_transcribe_audio(self, mock_whisper_instance):

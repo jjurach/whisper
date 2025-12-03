@@ -18,7 +18,7 @@ This tool enables hands-free text input through voice dictation, allowing users 
 ## Architecture
 
 ### Components:
-- **live_dictation.py**: Main application handling audio capture and transcription
+- **live_dictation.py**: Main application handling audio capture, transcription, and punctuation processing
 - **transcribe_file.py**: Command-line tool for transcribing audio files
 - **Service scripts**: Background process management (runner.sh, setup scripts)
 
@@ -26,7 +26,8 @@ This tool enables hands-free text input through voice dictation, allowing users 
 1. **Audio Capture**: PyAudio captures system audio when push-to-talk activated
 2. **Speech Detection**: Monitors for voice activity and silence
 3. **Transcription**: Whisper model processes audio to text
-4. **Text Injection**: Simulates keyboard input to insert transcribed text
+4. **Punctuation Enhancement**: Replaces spoken commands (e.g., "period", "question mark") with actual punctuation
+5. **Text Injection**: Simulates keyboard input to insert final transcribed text
 
 ## Usage
 
