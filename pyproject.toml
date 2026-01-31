@@ -15,16 +15,17 @@ dependencies = [
 ]
 
 [project.scripts]
-live-whisper = "live_dictation:main"
+live-dictation = "live_whisper.live_dictation:main"
 
 [project.optional-dependencies]
 dev = [
     "ruff",
     "pre-commit",
+    "pytest",
 ]
 
-[tool.setuptools]
-py-modules = ["live_dictation"]
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 88

@@ -189,9 +189,23 @@ def process_text_with_llm(text):
         pattern = r'\b' + re.escape(keyword) + r'\b'
         text = re.sub(pattern, punctuation, text, flags=re.IGNORECASE)
 
-    # Clean up extra spaces after punctuation (Apple dictation behavior)
-    # Remove spaces after punctuation marks but not before
-    text = re.sub(r'([.,!?;:\'\"])(\s+)', r'\1', text)
+    # Clean up spaces around punctuation and newlines (Apple dictation behavior)
+    # Remove single space before terminal punctuation (period, comma, question, exclamation)
+    # Note: exclude quotes and parentheses as they need special handling
+    text = re.sub(r'([^ ]) ([.,!?])', r'\1\2', text)
+    # Remove single space after comma when between words (preserve multiple spaces)
+    text = re.sub(r'(,) ([^ \n])', r'\1\2', text)
+    # Colon and semicolon should keep space after
+    text = re.sub(r'([^ ]) ([;:])', r'\1\2', text)
+    # Dollar sign and other symbols - remove space before but keep after
+    text = re.sub(r'([^ ]) (\$)', r'\1\2', text)
+    # Remove spaces inside quotes and parentheses
+    # Match content between quotes/parens and remove surrounding spaces
+    text = re.sub(r'" +([a-zA-Z0-9\'"]+) +"', r'"\1"', text)  # Spaces inside quotes
+    text = re.sub(r'\( +([^)]+) +\)', r'(\1)', text)  # Spaces inside parentheses
+    # Remove spaces around newlines
+    text = re.sub(r' *\n', '\n', text)
+    text = re.sub(r'\n *', '\n', text)
 
     return text
 

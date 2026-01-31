@@ -3,11 +3,11 @@ from unittest.mock import patch, MagicMock
 
 # We have to be careful about the order of imports and mocks
 # Import the script to be tested
-import live_dictation
+from live_whisper import live_dictation
 
 
 class TestProcessingPipeline(unittest.TestCase):
-    @patch("live_dictation.wave.open")
+    @patch("live_whisper.live_dictation.wave.open")
     def test_save_audio_to_wav(self, mock_wave_open):
         """
         Tests that the save_audio_to_wav function calls the wave module
@@ -64,7 +64,7 @@ class TestProcessingPipeline(unittest.TestCase):
         # Test empty input
         self.assertEqual(live_dictation.process_text_with_llm(""), "")
 
-    @patch("live_dictation.whisper_instance")
+    @patch("live_whisper.live_dictation.whisper_instance")
     def test_transcribe_audio(self, mock_whisper_instance):
         """
         Tests the transcribe_audio function by mocking the whisper model.

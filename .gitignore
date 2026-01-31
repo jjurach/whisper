@@ -8,3 +8,6 @@ __pycache__/
 *.pid
 /build
 /*.egg-info
+.aider*
+*.egg-info/
+dev_notes/

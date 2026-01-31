@@ -1,43 +1,13 @@
 import unittest
-import re
+import sys
+from unittest.mock import MagicMock
 
+# Mock heavy dependencies to test just the punctuation function
+sys.modules['pyaudio'] = MagicMock()
+sys.modules['pynput'] = MagicMock()
+sys.modules['pynput.keyboard'] = MagicMock()
 
-def process_text_with_llm(text):
-    """
-    Processes the transcribed text by replacing spoken punctuation commands
-    with actual punctuation marks, aligned with Apple's dictation commands.
-    """
-    if not text:
-        return text
-
-    print(f"Processing text '{text}' with keyword punctuation replacement...", flush=True)
-
-    # Order: longer phrases first to prevent partial matches
-    replacements = {
-        # Multi-word commands first
-        "question mark": "?",
-        "exclamation point": "!",
-        "new paragraph": "\n\n",
-        "new line": "\n",
-        "open quote": "\"",
-        "close quote": "\"",
-        "dollar sign": "$",
-        "open parenthesis": "(",
-        "close parenthesis": ")",
-        # Single-word commands
-        "period": ".",
-        "comma": ",",
-        "colon": ":",
-        "semicolon": ";",
-        "hashtag": "#",
-    }
-
-    # Case-insensitive word boundary replacement
-    for keyword, punctuation in replacements.items():
-        pattern = r'\b' + re.escape(keyword) + r'\b'
-        text = re.sub(pattern, punctuation, text, flags=re.IGNORECASE)
-
-    return text
+from live_whisper.live_dictation import process_text_with_llm
 
 
 class TestKeywordReplacement(unittest.TestCase):
