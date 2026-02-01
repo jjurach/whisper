@@ -1,14 +1,14 @@
 import argparse
-import argparse
-import pyaudio
-import numpy as np
-import time
+import re
 import sys
 import threading
+import time
 import wave
-import re
 from pprint import pprint
-from pynput.keyboard import Key, Listener, Controller
+
+import numpy as np
+import pyaudio
+from pynput.keyboard import Controller, Key, Listener
 from scipy.signal import resample
 
 # --- CONFIGURATION ---
@@ -69,7 +69,7 @@ def stop_recording_and_process():
     global is_recording, stream, record_start_time
     if is_recording:
         key_press_duration = time.time() - record_start_time
-        print(f"\n--- DIAGNOSTICS ---", flush=True)
+        print("\n--- DIAGNOSTICS ---", flush=True)
         print(
             f"Control key held down for: {key_press_duration:.2f} seconds", flush=True
         )
@@ -162,7 +162,9 @@ def process_text_with_llm(text):
     if not text:
         return text
 
-    print(f"Processing text '{text}' with keyword punctuation replacement...", flush=True)
+    print(
+        f"Processing text '{text}' with keyword punctuation replacement...", flush=True
+    )
 
     # Order: longer phrases first to prevent partial matches
     replacements = {
@@ -171,8 +173,8 @@ def process_text_with_llm(text):
         "exclamation point": "!",
         "new paragraph": "\n\n",
         "new line": "\n",
-        "open quote": "\"",
-        "close quote": "\"",
+        "open quote": '"',
+        "close quote": '"',
         "dollar sign": "$",
         "open parenthesis": "(",
         "close parenthesis": ")",
@@ -186,26 +188,27 @@ def process_text_with_llm(text):
 
     # Case-insensitive word boundary replacement
     for keyword, punctuation in replacements.items():
-        pattern = r'\b' + re.escape(keyword) + r'\b'
+        pattern = r"\b" + re.escape(keyword) + r"\b"
         text = re.sub(pattern, punctuation, text, flags=re.IGNORECASE)
 
     # Clean up spaces around punctuation and newlines (Apple dictation behavior)
-    # Remove single space before terminal punctuation (period, comma, question, exclamation)
+    # Remove single space before terminal punctuation
+    # (period, comma, question, exclamation)
     # Note: exclude quotes and parentheses as they need special handling
-    text = re.sub(r'([^ ]) ([.,!?])', r'\1\2', text)
+    text = re.sub(r"([^ ]) ([.,!?])", r"\1\2", text)
     # Remove single space after comma when between words (preserve multiple spaces)
-    text = re.sub(r'(,) ([^ \n])', r'\1\2', text)
+    text = re.sub(r"(,) ([^ \n])", r"\1\2", text)
     # Colon and semicolon should keep space after
-    text = re.sub(r'([^ ]) ([;:])', r'\1\2', text)
+    text = re.sub(r"([^ ]) ([;:])", r"\1\2", text)
     # Dollar sign and other symbols - remove space before but keep after
-    text = re.sub(r'([^ ]) (\$)', r'\1\2', text)
+    text = re.sub(r"([^ ]) (\$)", r"\1\2", text)
     # Remove spaces inside quotes and parentheses
     # Match content between quotes/parens and remove surrounding spaces
     text = re.sub(r'" +([a-zA-Z0-9\'"]+) +"', r'"\1"', text)  # Spaces inside quotes
-    text = re.sub(r'\( +([^)]+) +\)', r'(\1)', text)  # Spaces inside parentheses
+    text = re.sub(r"\( +([^)]+) +\)", r"(\1)", text)  # Spaces inside parentheses
     # Remove spaces around newlines
-    text = re.sub(r' *\n', '\n', text)
-    text = re.sub(r'\n *', '\n', text)
+    text = re.sub(r" *\n", "\n", text)
+    text = re.sub(r"\n *", "\n", text)
 
     return text
 
@@ -286,9 +289,9 @@ def main():
 
     # 2. Start the Listener Loop
     print("-" * 40, flush=True)
-    print(f"Dictation Ready. Press and HOLD **Right Control** to record.", flush=True)
+    print("Dictation Ready. Press and HOLD **Right Control** to record.", flush=True)
     print("Release Right Control to transcribe and type.", flush=True)
-    print(f"Press **ESCAPE** to quit.", flush=True)
+    print("Press **ESCAPE** to quit.", flush=True)
     print("-" * 40, flush=True)
 
     # The main logic is wrapped in a try block to ensure cleanup happens
@@ -296,10 +299,10 @@ def main():
         # --- INTERACTIVE MODE ---
         print("-" * 40, flush=True)
         print(
-            f"Dictation Ready. Press and HOLD **Right Control** to record.", flush=True
+            "Dictation Ready. Press and HOLD **Right Control** to record.", flush=True
         )
         print("Release Right Control to transcribe and type.", flush=True)
-        print(f"Press **ESCAPE** to quit.", flush=True)
+        print("Press **ESCAPE** to quit.", flush=True)
         if args.timeout:
             print(
                 f"Script will automatically exit after {args.timeout} seconds.",

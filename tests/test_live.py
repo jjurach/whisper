@@ -1,9 +1,19 @@
+import sys
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+# Mock heavy dependencies
+sys.modules["pyaudio"] = MagicMock()
+sys.modules["pynput"] = MagicMock()
+sys.modules["pynput.keyboard"] = MagicMock()
+sys.modules["numpy"] = MagicMock()
+sys.modules["scipy"] = MagicMock()
+sys.modules["scipy.signal"] = MagicMock()
+sys.modules["whisper"] = MagicMock()
 
 # We have to be careful about the order of imports and mocks
 # Import the script to be tested
-from live_whisper import live_dictation
+from live_whisper import live_dictation  # noqa: E402
 
 
 class TestProcessingPipeline(unittest.TestCase):

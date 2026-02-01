@@ -105,6 +105,19 @@ This project uses [Ruff](https://docs.astral.sh/ruff/) for linting and formattin
     -   **Format:** `ruff format .`
     -   **Lint:** `ruff check .`
 
+## Documentation
+
+### For AI Agents
+- **[AGENTS.md](AGENTS.md)** - Mandatory workflow for AI agents
+- **[Definition of Done](docs/definition-of-done.md)** - Quality standards
+- **[Workflows](docs/workflows.md)** - Development workflows
+- **[Mandatory Guidelines](docs/mandatory.md)** - Project-specific rules
+
+### For Developers
+- **[Documentation Index](docs/README.md)** - Complete documentation navigation
+- **[Architecture](docs/architecture.md)** - System architecture
+- **[Implementation Reference](docs/implementation-reference.md)** - Code patterns
+
 ## Files
 
 - `live_dictation.py`: The main application script.

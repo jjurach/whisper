@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import argparse
 import sys
+
 import numpy as np
+import whisper
 from scipy.io import wavfile
 from scipy.signal import resample
-import whisper
+
 
 def main():
     """
@@ -15,14 +17,15 @@ def main():
         description="Transcribe a .wav file using Whisper and print to stdout."
     )
     parser.add_argument(
-        "input_file",
-        type=str,
-        help="Path to the input .wav file to be transcribed."
+        "input_file", type=str, help="Path to the input .wav file to be transcribed."
     )
     parser.add_argument(
         "--model",
         default="small.en",
-        help="The Whisper model to use (e.g., tiny.en, base.en, small.en). Default: small.en"
+        help=(
+            "The Whisper model to use (e.g., tiny.en, base.en, small.en). "
+            "Default: small.en"
+        ),
     )
     args = parser.parse_args()
 
@@ -44,16 +47,20 @@ def main():
 
         # Get the original data type to normalize correctly
         original_dtype = data.dtype
-        
+
         # Normalize to float32
         audio_data = data.astype(np.float32)
-        
+
         # Use the correct maximum for the original dtype
         if np.issubdtype(original_dtype, np.integer):
             max_val = np.iinfo(original_dtype).max
-            print(f"Normalizing audio based on original dtype '{original_dtype}' with max value {max_val}.", file=sys.stderr)
+            print(
+                f"Normalizing audio based on original dtype '{original_dtype}' "
+                f"with max value {max_val}.",
+                file=sys.stderr,
+            )
             audio_data /= max_val
-        
+
         # Ensure data is in the range [-1.0, 1.0]
         audio_data = np.clip(audio_data, -1.0, 1.0)
 
@@ -62,15 +69,18 @@ def main():
             print(f"Resampling from {samplerate} Hz to 16000 Hz...", file=sys.stderr)
             num_samples = round(len(audio_data) * 16000 / samplerate)
             audio_data = resample(audio_data, num_samples)
-            
+
             # Re-clamp after resampling, as it can introduce values outside the range
             audio_data = np.clip(audio_data, -1.0, 1.0)
-            print(f"Resampling complete. Final sample count: {len(audio_data)}", file=sys.stderr)
+            print(
+                f"Resampling complete. Final sample count: {len(audio_data)}",
+                file=sys.stderr,
+            )
 
         # 5. Transcribe the audio
         print("Transcribing...", file=sys.stderr)
         result = model.transcribe(audio_data, fp16=False)
-        transcribed_text = result['text'].strip()
+        transcribed_text = result["text"].strip()
 
         # 6. Output the final text to stdout
         print(transcribed_text)
@@ -81,6 +91,7 @@ def main():
     except Exception as e:
         print(f"An unexpected error occurred: {e}", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
