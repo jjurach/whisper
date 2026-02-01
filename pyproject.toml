@@ -18,6 +18,9 @@ dependencies = [
 live-dictation = "live_whisper.live_dictation:main"
 
 [project.optional-dependencies]
+test = [
+    "pytest",
+]
 dev = [
     "ruff",
     "pre-commit",
