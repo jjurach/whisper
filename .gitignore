@@ -10,4 +10,3 @@ __pycache__/
 /*.egg-info
 .aider*
 *.egg-info/
-dev_notes/
