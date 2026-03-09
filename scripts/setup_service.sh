@@ -5,7 +5,7 @@ set -e
 
 SERVICE_DIR="$HOME/.config/systemd/user"
 SERVICE_FILE="$SERVICE_DIR/live-dictation.service"
-PROJECT_DIR="/home/phaedrus/AiSpace/whisper"
+PROJECT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
 # Create the systemd user directory if it doesn't exist
 mkdir -p "$SERVICE_DIR"

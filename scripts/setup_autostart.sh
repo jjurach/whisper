@@ -5,7 +5,7 @@ set -e
 
 AUTOSTART_DIR="$HOME/.config/autostart"
 DESKTOP_FILE="$AUTOSTART_DIR/live-dictation.desktop"
-PROJECT_DIR="/home/phaedrus/AiSpace/whisper"
+PROJECT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
 # Create the autostart directory if it doesn't exist
 mkdir -p "$AUTOSTART_DIR"
@@ -30,5 +30,5 @@ echo "The live dictation script will now automatically start the next time you l
 echo "To disable it, you can delete that file or use your desktop's 'Startup Applications' manager."
 echo ""
 echo "To start it immediately for this session without logging out, you can run:"
-echo "nohup /home/phaedrus/AiSpace/whisper/venv/bin/python /home/phaedrus/AiSpace/whisper/live_dictation.py --model base.en > /dev/null 2>&1 &"
+echo "nohup $PROJECT_DIR/venv/bin/python $PROJECT_DIR/live_dictation.py --model base.en > /dev/null 2>&1 &"
 
